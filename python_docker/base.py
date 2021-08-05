@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 import hashlib
 import gzip
 
-from python_docker import __version__ as VERSION
 from python_docker import schema, utils
 from python_docker.tar import (
     parse_v1,
@@ -22,11 +21,11 @@ class Layer:
         id,
         parent,
         content,
-        architecture : str = 'x86-64',
-        os : str = 'linux',
-        created : str = None,
-        author : str = 'conda-docker',
-        config : schema.DockerConfigConfig = None,
+        architecture: str = "x86-64",
+        os: str = "linux",
+        created: str = None,
+        author: str = "conda-docker",
+        config: schema.DockerConfigConfig = None,
     ):
         self.id = id
         self.parent = parent
@@ -51,7 +50,7 @@ class Layer:
 
     @property
     def compressed_content(self):
-        if hasattr(self, '_compressed_content'):
+        if hasattr(self, "_compressed_content"):
             return self._compressed_content
         # mtime needs to be set to a constant to ensure reproducibility
         self._compressed_content = gzip.compress(self.content, mtime=0)
@@ -156,6 +155,6 @@ class Image:
         docker_manifest_hash = hashlib.sha256(docker_manifest_content).hexdigest()
 
         return {
-            'manifest': (docker_manifest_content, docker_manifest_hash),
-            'config': (docker_config_content, docker_config_hash),
+            "manifest": (docker_manifest_content, docker_manifest_hash),
+            "config": (docker_config_content, docker_config_hash),
         }

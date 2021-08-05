@@ -3,6 +3,7 @@ import os
 
 from python_docker.base import Image
 
+
 def test_read_docker_image_from_file():
     filename = 'tests/assets/hello-world.tar'
 
