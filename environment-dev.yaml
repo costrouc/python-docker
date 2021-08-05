@@ -1,0 +1,7 @@
+name: python-docker-dev
+channels:
+  - conda-forge
+dependencies:
+  - pydantic
+  # dev
+  - pytest
