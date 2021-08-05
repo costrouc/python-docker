@@ -9,12 +9,14 @@ on:
       - main
 
 jobs:
-  test-conda-store-server:
-    name: 'Test conda-store-server'
+  test-python-docker:
+    name: 'Test python-docker'
     runs-on: ubuntu-latest
     services:
       registry:
         image: library/registry
+        ports:
+          - "5000:5000"
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8]
