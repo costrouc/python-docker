@@ -17,6 +17,17 @@ jobs:
         image: library/registry
         ports:
           - "5000:5000"
+      registry-auth:
+        image: library/registry
+        volumes:
+          - "./tests/assets/htpasswd:/auth/htpasswd:ro"
+        env:
+          REGISTRY_HTTP_ADDR: 0.0.0.0:6000
+          REGISTRY_AUTH: htpasswd
+          REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+          REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+        ports:
+          - "6000:6000"
     strategy:
       matrix:
         python-version: [3.8, 3.9]

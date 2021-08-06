@@ -1,8 +1,10 @@
 from urllib.request import Request, urlopen
+from urllib import error
 import json
 import gzip
 import time
 import functools
+import base64
 
 from python_docker.base import Image, Layer
 
@@ -11,10 +13,28 @@ def ttlhash(seconds=60):
     return int(time.time() // seconds)
 
 
-def dockerhub_authenticate(image, action="pull"):
-    scope = f"repository:{image}:pull"
-    url = f"https://auth.docker.io/token?service=registry.docker.io&scope={scope}"
-    token = json.loads(get_request(url).decode("utf-8"))["token"]
+def basic_authentication(username, password, *args, **kwargs):
+    credentials = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode(
+        "utf-8"
+    )
+    return {"headers": {"Authorization": f"Basic {credentials}"}}
+
+
+def dockerhub_authentication(*args, **kwargs):
+    query = {
+        "service": "registry.docker.io",
+    }
+
+    if "image" in kwargs and "action" in kwargs:
+        query["scope"] = f"repository:{kwargs['image']}:{kwargs['action']}"
+
+    base_url = "https://auth.docker.io/token"
+    if query:
+        base_url += "?" + "&".join(f"{key}={value}" for key, value in query.items())
+
+    print(base_url)
+
+    token = json.loads(get_request(base_url).decode("utf-8"))["token"]
     return {
         "headers": {
             "Authorization": f"Bearer {token}",
@@ -40,26 +60,40 @@ class Registry:
     def __init__(
         self,
         hostname="https://registry-1.docker.io",
-        authentication_method=dockerhub_authenticate,
+        authentication=dockerhub_authentication,
         ttl=60,
     ):
         self.hostname = hostname
 
         self.authentication_method = None
-        if authentication_method:
+        if authentication:
 
             @functools.lru_cache(maxsize=None)
-            def _authentication_method(image, action, ttlhash):
-                return authentication_method(image, action)
+            def _authentication_method(ttlhash, *args, **kwargs):
+                return authentication(*args, **kwargs)
 
             self.authentication_method = _authentication_method
-
         self.ttl = ttl
+
+    def authenticated(self):
+        headers = {}
+        if self.authentication_method:
+            credentials = self.authentication_method(ttlhash=ttlhash(self.ttl))
+            headers.update(credentials["headers"])
+
+        try:
+            url = f"{self.hostname}/v2/"
+            get_request(url, headers)
+            return True
+        except error.HTTPError:
+            return False
 
     def get_manifest(self, image, tag):
         headers = {}
         if self.authentication_method:
-            credentials = self.authentication_method(image, "pull", ttlhash(self.ttl))
+            credentials = self.authentication_method(
+                image=image, action="pull", ttlhash=ttlhash(self.ttl)
+            )
             headers.update(credentials["headers"])
 
         url = f"{self.hostname}/v2/{image}/manifests/{tag}"
@@ -68,7 +102,9 @@ class Registry:
     def get_blob(self, image, blobsum):
         headers = {}
         if self.authentication_method:
-            credentials = self.authentication_method(image, "pull", ttlhash(self.ttl))
+            credentials = self.authentication_method(
+                image=image, action="pull", ttlhash=ttlhash(self.ttl)
+            )
             headers.update(credentials["headers"])
 
         url = f"{self.hostname}/v2/{image}/blobs/{blobsum}"

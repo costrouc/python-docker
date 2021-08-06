@@ -5,3 +5,15 @@ services:
     image: registry:latest
     ports:
       - "5000:5000"
+
+  registry-auth:
+    image: registry:latest
+    volumes:
+      - "./tests/assets/htpasswd:/auth/htpasswd:ro"
+    ports:
+      - "6000:6000"
+    environment:
+      REGISTRY_HTTP_ADDR: 0.0.0.0:6000
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
