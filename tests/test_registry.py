@@ -42,6 +42,9 @@ def test_local_docker_pull():
     subprocess.check_output(['docker', 'push', 'localhost:5000/library/mybusybox:mylatest'])
 
     registry = Registry(hostname='http://localhost:5000', authentication=None)
+
+    assert 'library/mybusybox' in registry.catalog()
+
     image = registry.pull_image('library/mybusybox', 'mylatest')
 
     assert image.name == 'library/mybusybox'
