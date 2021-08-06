@@ -29,6 +29,7 @@ setup(
     packages=find_packages(where="."),
     install_requires=[
         "pydantic",
+        "requests",
     ],
     extras_require={
         "dev": [

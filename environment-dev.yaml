@@ -2,6 +2,7 @@ name: python-docker-dev
 channels:
   - conda-forge
 dependencies:
+  - requests
   - pydantic
   # dev
   - pytest

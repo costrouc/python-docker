@@ -3,6 +3,7 @@ import subprocess
 import functools
 
 from python_docker.registry import Registry, basic_authentication, dockerhub_authentication
+from python_docker.base import Image
 
 
 @pytest.mark.parametrize('image_name, tag, layers', [
@@ -27,6 +28,14 @@ def test_registry_authenticated(hostname, authentication):
     assert r.authenticated()
 
 
+@pytest.mark.parametrize('hostname, authentication', [
+    ('http://localhost:6000', functools.partial(basic_authentication, 'admin', 'wrongpassword')),
+])
+def test_registry_not_authenticated(hostname, authentication):
+    r = Registry(hostname, authentication)
+    assert not r.authenticated()
+
+
 def test_local_docker_pull():
     subprocess.check_output(['docker', 'load', '-i', 'tests/assets/busybox.tar'])
     subprocess.check_output(['docker', 'tag', 'busybox:latest', 'localhost:5000/library/mybusybox:mylatest'])
@@ -38,3 +47,16 @@ def test_local_docker_pull():
     assert image.name == 'library/mybusybox'
     assert image.tag == 'mylatest'
     assert len(image.layers) == 2
+
+
+@pytest.mark.parametrize('hostname, authentication', [
+    ('http://localhost:5000', None),
+    ('http://localhost:6000', functools.partial(basic_authentication, 'admin', 'password')),
+])
+def test_local_docker_push(hostname, authentication):
+    filename = 'tests/assets/hello-world.tar'
+    image = Image.from_filename(filename)[0]
+    image.name = "this/atest"
+
+    registry = Registry(hostname=hostname, authentication=authentication)
+    registry.push_image(image)
