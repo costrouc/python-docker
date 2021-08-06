@@ -185,3 +185,7 @@ class Registry:
             )
 
         self.upload_manifest(image.name, image.tag, image.manifest_v2)
+
+    def delete_image(self, image, tag):
+        response = self.request(f"/v2/{image}/manifests/{tag}", method="DELETE")
+        response.raise_for_status()

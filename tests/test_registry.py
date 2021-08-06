@@ -64,3 +64,18 @@ def test_local_docker_push(hostname, authentication):
     registry.push_image(image)
 
     assert image.name in registry.catalog()
+
+
+@pytest.mark.xfail
+def test_local_docker_delete():
+    subprocess.check_output(['docker', 'load', '-i', 'tests/assets/busybox.tar'])
+    subprocess.check_output(['docker', 'tag', 'busybox:latest', 'localhost:5000/library/mybusybox:mylatest'])
+    subprocess.check_output(['docker', 'push', 'localhost:5000/library/mybusybox:mylatest'])
+
+    registry = Registry(hostname='http://localhost:5000', authentication=None)
+
+    assert 'library/mybusybox' in registry.catalog()
+
+    registry.delete_image('library/mybusybox', 'mylatest')
+
+    assert 'library/mybusybox' not in registry.catalog()
