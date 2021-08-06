@@ -48,7 +48,7 @@ class Registry:
         self.authentication_method = None
         if authentication_method:
 
-            @functools.cache
+            @functools.lru_cache(maxsize=None)
             def _authentication_method(image, action, ttlhash):
                 return authentication_method(image, action)
 
