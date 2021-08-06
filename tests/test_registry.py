@@ -43,7 +43,8 @@ def test_local_docker_pull():
 
     registry = Registry(hostname='http://localhost:5000', authentication=None)
 
-    assert 'library/mybusybox' in registry.catalog()
+    assert 'library/mybusybox' in registry.list_images()
+    assert 'mylatest' in registry.list_image_tags('library/mybusybox')
 
     image = registry.pull_image('library/mybusybox', 'mylatest')
 
@@ -63,7 +64,8 @@ def test_local_docker_push(hostname, authentication):
     registry = Registry(hostname=hostname, authentication=authentication)
     registry.push_image(image)
 
-    assert image.name in registry.catalog()
+    assert image.name in registry.list_images()
+    assert image.tag in registry.list_image_tags(image.name)
 
 
 @pytest.mark.xfail
@@ -74,8 +76,9 @@ def test_local_docker_delete():
 
     registry = Registry(hostname='http://localhost:5000', authentication=None)
 
-    assert 'library/mybusybox' in registry.catalog()
+    assert 'library/mybusybox' in registry.list_images()
+    assert 'mylatest' in registry.list_image_tags('library/mybusybox')
 
     registry.delete_image('library/mybusybox', 'mylatest')
 
-    assert 'library/mybusybox' not in registry.catalog()
+    assert 'library/mybusybox' not in registry.list_images()

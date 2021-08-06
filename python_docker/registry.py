@@ -93,6 +93,13 @@ class Registry:
         response.raise_for_status()
         return response.json()
 
+    def get_manifest_digest(self, image: str, tag: str):
+        response = self.request(
+            f"/v2/{image}/manifests/{tag}", method="HEAD", image=image, action="pull"
+        )
+        response.raise_for_status()
+        return response.headers["Docker-Content-Digest"]
+
     def check_blob(self, image: str, blobsum: str):
         response = self.request(
             f"/v2/{image}/blobs/{blobsum}", method="HEAD", image=image, action="pull"
@@ -147,7 +154,7 @@ class Registry:
         )
         response.raise_for_status()
 
-    def catalog(self, n: int = None, last: int = None):
+    def list_images(self, n: int = None, last: int = None):
         query = {}
         if n is not None:
             query["n"] = n
@@ -155,6 +162,15 @@ class Registry:
             query["last"] = last
 
         return self.request("/v2/_catalog", params=query).json()["repositories"]
+
+    def list_image_tags(self, image: str, n: int = None, last: int = None):
+        query = {}
+        if n is not None:
+            query["n"] = n
+        if last is not None:
+            query["last"] = last
+
+        return self.request(f"/v2/{image}/tags/list", params=query).json()["tags"]
 
     def pull_image(self, image: str, tag: str = "latest"):
         manifest = self.get_manifest(image, tag)
@@ -187,5 +203,6 @@ class Registry:
         self.upload_manifest(image.name, image.tag, image.manifest_v2)
 
     def delete_image(self, image, tag):
-        response = self.request(f"/v2/{image}/manifests/{tag}", method="DELETE")
+        digest = self.get_manifest_digest(image, tag)
+        response = self.request(f"/v2/{image}/manifests/{digest}", method="DELETE")
         response.raise_for_status()
