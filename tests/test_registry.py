@@ -56,7 +56,8 @@ def test_local_docker_pull():
 def test_local_docker_push(hostname, authentication):
     filename = 'tests/assets/hello-world.tar'
     image = Image.from_filename(filename)[0]
-    image.name = "this/atest"
 
     registry = Registry(hostname=hostname, authentication=authentication)
     registry.push_image(image)
+
+    assert image.name in registry.catalog()

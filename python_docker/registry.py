@@ -147,6 +147,15 @@ class Registry:
         )
         response.raise_for_status()
 
+    def catalog(self, n: int = None, last: int = None):
+        query = {}
+        if n is not None:
+            query["n"] = n
+        if last is not None:
+            query["last"] = last
+
+        return self.request("/v2/_catalog", params=query).json()["repositories"]
+
     def pull_image(self, image: str, tag: str = "latest"):
         manifest = self.get_manifest(image, tag)
 
