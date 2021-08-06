@@ -12,22 +12,6 @@ jobs:
   test-python-docker:
     name: 'Test python-docker'
     runs-on: ubuntu-latest
-    services:
-      registry:
-        image: library/registry
-        ports:
-          - "5000:5000"
-      registry-auth:
-        image: library/registry
-        volumes:
-          - "./tests/assets/htpasswd:/auth/htpasswd:ro"
-        env:
-          REGISTRY_HTTP_ADDR: 0.0.0.0:6000
-          REGISTRY_AUTH: htpasswd
-          REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
-          REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
-        ports:
-          - "6000:6000"
     strategy:
       matrix:
         python-version: [3.8, 3.9]
@@ -40,6 +24,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install Dependencies
         run: |
+          sudo apt install wait-for-it -y
           pip install .[dev]
       - name: Black Formatting
         run: |
@@ -50,6 +35,13 @@ jobs:
         run: |
           flake8 --version
           flake8
+      - name: Startup services
+        run: |
+          docker-compose up -d
+          docker ps
+
+          wait-for-it localhost:5000
+          wait-for-it localhost:6000
       - name: Run tests
         run: |
           pytest
