@@ -52,6 +52,7 @@ class Registry:
 
         self.authentication_method = None
         if authentication:
+
             @functools.lru_cache(maxsize=None)
             def _authentication_method(ttlhash, *args, **kwargs):
                 return authentication(*args, **kwargs)
@@ -59,65 +60,94 @@ class Registry:
             self.authentication_method = _authentication_method
         self.ttl = ttl
 
-    def request(self, url : str, method='GET', headers=None, params=None, data=None, **kwargs):
+    def request(
+        self, url: str, method="GET", headers=None, params=None, data=None, **kwargs
+    ):
         method_map = {
-            'HEAD': requests.head,
-            'GET': requests.get,
-            'POST': requests.post,
-            'PUT': requests.put,
-            'DELETE': requests.delete,
+            "HEAD": requests.head,
+            "GET": requests.get,
+            "POST": requests.post,
+            "PUT": requests.put,
+            "DELETE": requests.delete,
         }
 
         headers = headers or {}
         if self.authentication_method:
-            credentials = self.authentication_method(ttlhash=ttlhash(self.ttl), **kwargs)
+            credentials = self.authentication_method(
+                ttlhash=ttlhash(self.ttl), **kwargs
+            )
             headers.update(credentials["headers"])
 
-        return method_map[method](f"{self.hostname}{url}", headers=headers, params=params, data=data)
+        return method_map[method](
+            f"{self.hostname}{url}", headers=headers, params=params, data=data
+        )
 
     def authenticated(self):
         response = self.request("/v2/")
         return response.status_code != 401
 
-    def get_manifest(self, image : str, tag : str):
-        response = self.request(f"/v2/{image}/manifests/{tag}", image=image, action="pull")
+    def get_manifest(self, image: str, tag: str):
+        response = self.request(
+            f"/v2/{image}/manifests/{tag}", image=image, action="pull"
+        )
         response.raise_for_status()
         return response.json()
 
-    def check_blob(self, image : str, blobsum : str):
-        response = self.request(f"/v2/{image}/blobs/{blobsum}", method='HEAD', image=image, action="pull")
+    def check_blob(self, image: str, blobsum: str):
+        response = self.request(
+            f"/v2/{image}/blobs/{blobsum}", method="HEAD", image=image, action="pull"
+        )
         return response.status_code == 200
 
-    def get_blob(self, image : str, blobsum : str):
-        response = self.request(f"/v2/{image}/blobs/{blobsum}", image=image, action="pull")
+    def get_blob(self, image: str, blobsum: str):
+        response = self.request(
+            f"/v2/{image}/blobs/{blobsum}", image=image, action="pull"
+        )
         response.raise_for_status()
         return gzip.decompress(response.content)
 
-    def begin_upload(self, image : str):
-        response = self.request(f"/v2/{image}/blobs/uploads/", method="POST", image=image, action="push")
+    def begin_upload(self, image: str):
+        response = self.request(
+            f"/v2/{image}/blobs/uploads/", method="POST", image=image, action="push"
+        )
         response.raise_for_status()
-        location = urlparse(response.headers['Location'])
+        location = urlparse(response.headers["Location"])
         return location.path, parse_qs(location.query)
 
-    def upload_blob(self, image : str, digest, checksum):
+    def upload_blob(self, image: str, digest, checksum):
         upload_location, upload_query = self.begin_upload(image)
-        upload_query['digest'] = f'sha256:{checksum}'
+        upload_query["digest"] = f"sha256:{checksum}"
 
-        response = self.request(upload_location, method='PUT',
-                                data=digest, image=image, action="push",
-                                params=upload_query, headers={'Content-Type': 'application/octet-stream'})
+        response = self.request(
+            upload_location,
+            method="PUT",
+            data=digest,
+            image=image,
+            action="push",
+            params=upload_query,
+            headers={"Content-Type": "application/octet-stream"},
+        )
         response.raise_for_status()
 
-    def upload_manifest(self, image : str, tag : str, manifest : dict):
-        manifest_config, manifest_config_checksum = manifest['config']
-        manifest, manifest_checksum = manifest['manifest']
+    def upload_manifest(self, image: str, tag: str, manifest: dict):
+        manifest_config, manifest_config_checksum = manifest["config"]
+        manifest, manifest_checksum = manifest["manifest"]
 
         self.upload_blob(image, manifest_config, manifest_config_checksum)
 
-        response = self.request(f'/v2/{image}/manifests/{tag}', method='PUT', data=manifest, iamge=image, action="push", headers={'Content-Type': 'application/vnd.docker.distribution.manifest.v2+json'})
+        response = self.request(
+            f"/v2/{image}/manifests/{tag}",
+            method="PUT",
+            data=manifest,
+            iamge=image,
+            action="push",
+            headers={
+                "Content-Type": "application/vnd.docker.distribution.manifest.v2+json"
+            },
+        )
         response.raise_for_status()
 
-    def pull_image(self, image : str, tag : str = "latest"):
+    def pull_image(self, image: str, tag: str = "latest"):
         manifest = self.get_manifest(image, tag)
 
         layers = []
@@ -139,8 +169,10 @@ class Registry:
             )
         return Image(image, tag, layers)
 
-    def push_image(self, image : Image):
+    def push_image(self, image: Image):
         for layer in image.layers:
-            self.upload_blob(image.name, layer.compressed_content, layer.compressed_checksum)
+            self.upload_blob(
+                image.name, layer.compressed_content, layer.compressed_checksum
+            )
 
         self.upload_manifest(image.name, image.tag, image.manifest_v2)
