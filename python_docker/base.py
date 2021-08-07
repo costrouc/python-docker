@@ -1,11 +1,13 @@
 import io
+import os
 import tarfile
 import secrets
 from datetime import datetime, timezone
 import hashlib
 import gzip
+import tempfile
 
-from python_docker import schema, utils
+from python_docker import schema, utils, docker
 from python_docker.tar import (
     parse_v1,
     write_v1,
@@ -158,3 +160,13 @@ class Image:
             "manifest": (docker_manifest_content, docker_manifest_hash),
             "config": (docker_config_content, docker_config_hash),
         }
+
+    def load(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filename = os.path.join(tmpdir, "docker.tar")
+            self.write_filename(filename)
+            docker.load(filename)
+
+    def run(self, cmd=None):
+        self.load()
+        return docker.run(self.name, self.tag, cmd=cmd)[:-1]

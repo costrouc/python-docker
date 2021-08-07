@@ -1,7 +1,7 @@
 import pytest
-import subprocess
 import functools
 
+from python_docker import docker
 from python_docker.registry import (
     Registry,
     basic_authentication,
@@ -56,23 +56,27 @@ def test_registry_not_authenticated(hostname, authentication):
 
 
 def test_local_docker_pull():
-    subprocess.check_output(["docker", "load", "-i", "tests/assets/busybox.tar"])
-    subprocess.check_output(
-        ["docker", "tag", "busybox:latest", "localhost:5000/library/mybusybox:mylatest"]
+    image_filename = "tests/assets/busybox.tar"
+    image, tag = "busybox", "latest"
+    new_image_full, new_image, new_tag = (
+        "localhost:5000/library/mybusybox",
+        "library/mybusybox",
+        "mylatest",
     )
-    subprocess.check_output(
-        ["docker", "push", "localhost:5000/library/mybusybox:mylatest"]
-    )
+
+    docker.load(image_filename)
+    docker.tag(image, tag, new_image_full, new_tag)
+    docker.push(new_image_full, new_tag)
 
     registry = Registry(hostname="http://localhost:5000", authentication=None)
 
-    assert "library/mybusybox" in registry.list_images()
-    assert "mylatest" in registry.list_image_tags("library/mybusybox")
+    assert new_image in registry.list_images()
+    assert new_tag in registry.list_image_tags("library/mybusybox")
 
-    image = registry.pull_image("library/mybusybox", "mylatest")
+    image = registry.pull_image(new_image, new_tag)
 
-    assert image.name == "library/mybusybox"
-    assert image.tag == "mylatest"
+    assert image.name == new_image
+    assert image.tag == new_tag
     assert len(image.layers) == 2
 
 
@@ -98,20 +102,24 @@ def test_local_docker_push(hostname, authentication):
 
 
 def test_local_docker_delete():
-    subprocess.check_output(["docker", "load", "-i", "tests/assets/busybox.tar"])
-    subprocess.check_output(
-        ["docker", "tag", "busybox:latest", "localhost:5000/library/mybusybox:mylatest"]
+    image_filename = "tests/assets/busybox.tar"
+    image, tag = "busybox", "latest"
+    new_image_full, new_image, new_tag = (
+        "localhost:5000/library/mybusybox",
+        "library/mybusybox",
+        "mylatest",
     )
-    subprocess.check_output(
-        ["docker", "push", "localhost:5000/library/mybusybox:mylatest"]
-    )
+
+    docker.load(image_filename)
+    docker.tag(image, tag, new_image_full, new_tag)
+    docker.push(new_image_full, new_tag)
 
     registry = Registry(hostname="http://localhost:5000", authentication=None)
 
-    assert "library/mybusybox" in registry.list_images()
-    assert "mylatest" in registry.list_image_tags("library/mybusybox")
+    assert new_image in registry.list_images()
+    assert new_tag in registry.list_image_tags(new_image)
 
-    registry.delete_image("library/mybusybox", "mylatest")
+    registry.delete_image(new_image, new_tag)
 
-    available_tags = registry.list_image_tags("library/mybusybox")
-    assert available_tags is None or "mylatest" not in available_tags
+    available_tags = registry.list_image_tags(new_image)
+    assert available_tags is None or new_tag not in available_tags
