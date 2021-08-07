@@ -95,7 +95,11 @@ class Registry:
 
     def get_manifest_digest(self, image: str, tag: str):
         response = self.request(
-            f"/v2/{image}/manifests/{tag}", method="HEAD", image=image, action="pull"
+            f"/v2/{image}/manifests/{tag}",
+            method="HEAD",
+            image=image,
+            action="pull",
+            headers={"Accept": "application/vnd.docker.distribution.manifest.v2+json"},
         )
         response.raise_for_status()
         return response.headers["Docker-Content-Digest"]

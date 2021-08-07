@@ -29,8 +29,8 @@ jobs:
       - name: Black Formatting
         run: |
           black --version
-          black python_docker --diff
-          black --check python_docker
+          black python_docker tests --diff
+          black --check python_docker tests
       - name: Flake8 Formatting
         run: |
           flake8 --version

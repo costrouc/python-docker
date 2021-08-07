@@ -34,7 +34,7 @@ class DockerManifest(BaseModel):
 class DockerConfigConfig(BaseModel):
     Hostname: str = ""
     Domainname: str = ""
-    User: str = "root"
+    User: str = "0:0"
     AttachStdin: bool = False
     AttachStdout: bool = False
     AttachStderr: bool = False

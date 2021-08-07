@@ -5,6 +5,8 @@ services:
     image: registry:latest
     ports:
       - "5000:5000"
+    environment:
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
 
   registry-auth:
     image: registry:latest
