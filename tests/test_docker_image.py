@@ -124,3 +124,17 @@ def test_add_layer_from_path_filter():
 
     assert image.run([os.path.join(path, "script.sh")]) == b"hello, world! 3\n"
     assert image.run([f"ls {path}"]) == b"script.sh\n"
+
+
+def test_remove_layer():
+    filename = "tests/assets/busybox.tar"
+    image = Image.from_filename(filename)[0]
+
+    path = "/this/is/a/path"
+    image.add_layer_path("tests/assets/example", path)
+
+    assert image.run([f"ls {path}"]) == b"hello.txt\nscript.sh\n"
+
+    image.remove_layer()
+
+    assert image.run(["ls", "/"]) == b"bin\ndev\netc\nhome\nproc\nroot\nsys\ntmp\nusr\nvar\n"
