@@ -61,23 +61,66 @@ def test_run_read_docker_image_from_file():
     )
 
 
-def test_add_layer_from_dict():
+def test_add_layer_from_dict_no_filter():
     filename = "tests/assets/busybox.tar"
     image = Image.from_filename(filename)[0]
 
-    path = "/var/lib/this/is/a/path/log.txt"
+    path = "/var/lib/this/is/a/path"
     message = b"hello, world!"
-    contents = {path: message}
-    image.add_layer_contents(contents)
+    contents = {
+        os.path.join(path, "hello.txt"): message,
+        os.path.join(
+            path, "script.sh"
+        ): b'#!/bin/sh\n\necho "hello, world! $((1 + 2))"\n',
+    }
+    image.add_layer_contents(contents, filter=None)
 
-    assert image.run([f"cat {path}"]) == message
+    assert image.run([f"cat {os.path.join(path, 'hello.txt')}"]) == message
+    assert image.run([f"ls {path}"]) == b"hello.txt\nscript.sh\n"
 
 
-def test_add_layer_from_path():
+def test_add_layer_from_dict_filter():
+    filename = "tests/assets/busybox.tar"
+    image = Image.from_filename(filename)[0]
+
+    path = "/var/lib/this/is/a/path"
+    message = b"hello, world!"
+    contents = {
+        os.path.join(path, "hello.txt"): message,
+        os.path.join(
+            path, "script.sh"
+        ): b'#!/bin/sh\n\necho "hello, world! $((1 + 2))"\n',
+    }
+
+    def filename_filter(tarinfo):
+        return None if tarinfo.name.endswith(".txt") else tarinfo
+
+    image.add_layer_contents(contents, filter=filename_filter)
+
+    assert image.run([f"ls {path}"]) == b"script.sh\n"
+
+
+def test_add_layer_from_path_no_filter():
     filename = "tests/assets/busybox.tar"
     image = Image.from_filename(filename)[0]
 
     path = "/this/is/a/path"
-    image.add_layer_path("tests/assets/example", path)
+    image.add_layer_path("tests/assets/example", path, filter=None)
 
     assert image.run([os.path.join(path, "script.sh")]) == b"hello, world! 3\n"
+    assert image.run([f"ls {path}"]) == b"hello.txt\nscript.sh\n"
+
+
+def test_add_layer_from_path_filter():
+    filename = "tests/assets/busybox.tar"
+    image = Image.from_filename(filename)[0]
+
+    path = "/this/is/a/path"
+
+    def filename_filter(tarinfo):
+        return None if tarinfo.name.endswith(".txt") else tarinfo
+
+    image.add_layer_path("tests/assets/example", path, filter=filename_filter)
+
+    assert image.run([os.path.join(path, "script.sh")]) == b"hello, world! 3\n"
+    assert image.run([f"ls {path}"]) == b"script.sh\n"
