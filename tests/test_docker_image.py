@@ -45,11 +45,12 @@ def test_run_read_docker_image_from_file():
     image = Image.from_filename(filename)[0]
 
     message = "hello, world!"
-    assert image.run(["echo", message]).decode("utf-8") == f"{message}"
+    assert image.run(["echo", message]).decode("utf-8") == f"{message}\n"
 
     # assert default permissions
     assert (
-        image.run(["id"]).decode("utf-8") == "uid=0(root) gid=0(root) groups=10(wheel)"
+        image.run(["id"]).decode("utf-8")
+        == "uid=0(root) gid=0(root) groups=10(wheel)\n"
     )
 
     output = image.run(["env"])[:-1].decode("utf-8")
@@ -58,3 +59,25 @@ def test_run_read_docker_image_from_file():
         environment["PATH"]
         == "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     )
+
+
+def test_add_layer_from_dict():
+    filename = "tests/assets/busybox.tar"
+    image = Image.from_filename(filename)[0]
+
+    path = "/var/lib/this/is/a/path/log.txt"
+    message = b"hello, world!"
+    contents = {path: message}
+    image.add_layer_contents(contents)
+
+    assert image.run([f"cat {path}"]) == message
+
+
+def test_add_layer_from_path():
+    filename = "tests/assets/busybox.tar"
+    image = Image.from_filename(filename)[0]
+
+    path = "/this/is/a/path"
+    image.add_layer_path("tests/assets/example", path)
+
+    assert image.run([os.path.join(path, "script.sh")]) == b"hello, world! 3\n"

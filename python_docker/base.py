@@ -27,7 +27,7 @@ class Layer:
         os: str = "linux",
         created: str = None,
         author: str = "conda-docker",
-        config: schema.DockerConfigConfig = None,
+        config: dict = None,
     ):
         self.id = id
         self.parent = parent
@@ -36,7 +36,7 @@ class Layer:
         self.os = os
         self.created = created or datetime.now(timezone.utc).astimezone().isoformat()
         self.author = author
-        self.config = config or schema.DockerConfigConfig()
+        self.config = config or schema.DockerConfigConfig().dict()
 
     @property
     def content(self):
@@ -169,4 +169,4 @@ class Image:
 
     def run(self, cmd=None):
         self.load()
-        return docker.run(self.name, self.tag, cmd=cmd)[:-1]
+        return docker.run(self.name, self.tag, cmd=cmd)
