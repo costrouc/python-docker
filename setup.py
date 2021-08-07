@@ -25,6 +25,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3 :: Only",
     ],
+    license_files=('LICENSE',),
     keywords="conda, docker",
     packages=find_packages(where="."),
     install_requires=[
