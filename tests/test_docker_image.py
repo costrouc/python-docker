@@ -137,4 +137,7 @@ def test_remove_layer():
 
     image.remove_layer()
 
-    assert image.run(["ls", "/"]) == b"bin\ndev\netc\nhome\nproc\nroot\nsys\ntmp\nusr\nvar\n"
+    assert (
+        image.run(["ls", "/"])
+        == b"bin\ndev\netc\nhome\nproc\nroot\nsys\ntmp\nusr\nvar\n"
+    )
