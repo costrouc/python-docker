@@ -4,8 +4,7 @@ A pure python implementation to build docker images without `docker`
 and provide a python api for interacting with docker
 registries.
 
-Examples using Library
-----------------------
+## Examples using Library
 
 Downloading docker images without docker!
 
@@ -40,12 +39,32 @@ image.write_filename('example-docker-image.tar')
 image.run(['cat /this/is/a/test1'])
 ```
 
-How does this work?
--------------------
+# Development
+
+## Dependencies
+
+ - [install docker-compose](https://docs.docker.com/compose/install/)
+ - [install conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
+
+Install the development environment
+
+```shell
+conda env create -f environment-dev.yaml
+```
+
+## Testing
+
+```shell
+docker-compose up -d
+pytest
+```
+
+# How does this work?
 
 Turns out that docker images are just a tar collection of files. There
 are several versions of the spec. For `v1.0` the specification is
-[defined here](https://github.com/moby/moby/blob/master/image/spec/v1.md).
+[defined
+here](https://github.com/moby/moby/blob/master/image/spec/v1.md).
 Instead of writing down the spec lets look into a single docker image.
 
 ```shell
@@ -119,13 +138,11 @@ tar -xf /tmp/ubuntu.tar $filename
 tar -tvf $filename | head
 ```
 
-References
-----------
--   [Docker Registry API
-    Specification](https://docs.docker.com/registry/spec/api/)
--   Docker Image Specification
-    -   [Summary](https://github.com/moby/moby/blob/master/image/spec/v1.2.md)
-    -   [Registry V2
-        Specification](https://docs.docker.com/registry/spec/manifest-v2-2/)
+# References
+
+ - [Docker Registry API Specification](https://docs.docker.com/registry/spec/api/)
+ - Docker Image Specification
+   - [Summary](https://github.com/moby/moby/blob/master/image/spec/v1.2.md)
+   - [Registry V2 Specification](https://docs.docker.com/registry/spec/manifest-v2-2/)
 
 
