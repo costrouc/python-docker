@@ -144,7 +144,8 @@ class Registry:
         manifest_config, manifest_config_checksum = manifest["config"]
         manifest, manifest_checksum = manifest["manifest"]
 
-        self.upload_blob(image, manifest_config, manifest_config_checksum)
+        if not self.check_blob(image, f'sha256:{manifest_config_checksum}'):
+            self.upload_blob(image, manifest_config, manifest_config_checksum)
 
         response = self.request(
             f"/v2/{image}/manifests/{tag}",
@@ -200,9 +201,13 @@ class Registry:
 
     def push_image(self, image: Image):
         for layer in image.layers:
-            self.upload_blob(
-                image.name, layer.compressed_content, layer.compressed_checksum
-            )
+            # make sure to check if the layer already exists on the
+            # registry this way if the layer is lazy (has not actually
+            # been downloaded) it does not have to be downloaded
+            if not self.check_blob(image.name, f'sha256:{layer.compressed_checksum}'):
+                self.upload_blob(
+                    image.name, layer.compressed_content, layer.compressed_checksum
+                )
 
         self.upload_manifest(image.name, image.tag, image.manifest_v2)
 
