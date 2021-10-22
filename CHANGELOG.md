@@ -18,6 +18,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.1.2] - 2021-10-21
+
+### Added
+
+ - test for wider range of docker images for download
+
+### Fixed
+
+ - bug in `container_config` field being an optional field in specification
+
 ## [0.1.1] - 2021-10-21
 
 ### Added

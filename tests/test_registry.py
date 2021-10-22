@@ -14,12 +14,15 @@ from python_docker.base import Image
     "image_name, tag, layers",
     [
         ("library/hello-world", "latest", 1),
-        ("library/busybox", "latest", 1),
+        ("library/busybox", "1.34.0", 1),
+        ("condaforge/miniforge3", "4.10.3-7", 2),
+        ("library/ubuntu", "xenial", 4),
     ],
 )
 def test_dockerhub_pull(image_name, tag, layers):
     registry = Registry()
-    image = registry.pull_image(image_name, tag)
+    # use lazy to avoid actual downloads of layers for this test
+    image = registry.pull_image(image_name, tag, lazy=True)
     assert image.name == image_name
     assert image.tag == tag
     assert len(image.layers) == layers

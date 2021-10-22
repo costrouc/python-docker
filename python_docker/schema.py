@@ -94,7 +94,7 @@ class DockerConfig(BaseModel):
     os: str = "linux"
     config: DockerConfigConfig
     container: Optional[str]
-    container_config: DockerConfigConfig
+    container_config: Optional[DockerConfigConfig]
     created: str = Field(default_factory=_docker_datetime_factory)
     docker_version: str = "18.09.7"
     history: List[DockerConfigHistory] = []
