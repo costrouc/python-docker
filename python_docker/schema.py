@@ -12,23 +12,48 @@ def _docker_datetime_factory():
     return datetime.datetime.utcnow().astimezone().isoformat()
 
 
-class DockerManifestLayer(BaseModel):
+class DockerManifestV1Layer(BaseModel):
+    blobSum: str
+
+
+class DockerManifestV1History(BaseModel):
+    v1Compatibility: str
+
+
+class DockerManifestV1Signatures(BaseModel):
+    header: Dict
+    signature: str
+    protected: str
+
+
+class DockerManifestV1(BaseModel):
+    schemaVersion: int = 1
+    name: str
+    tag: str
+    architecture: str
+
+    fsLayers: List[DockerManifestV1Layer]
+    history: List[DockerManifestV1History]
+    signatures: List[DockerManifestV1Signatures]
+
+
+class DockerManifestV2Layer(BaseModel):
     mediaType: str = "application/vnd.docker.image.rootfs.diff.tar.gzip"
     size: int
     digest: str
 
 
-class DockerManifestConfig(BaseModel):
+class DockerManifestV2Config(BaseModel):
     mediaType: str = "application/vnd.docker.container.image.v1+json"
     size: int
     digest: str
 
 
-class DockerManifest(BaseModel):
+class DockerManifestV2(BaseModel):
     schemaVersion: int = 2
     mediaType: str = "application/vnd.docker.distribution.manifest.v2+json"
-    config: DockerManifestConfig
-    layers: List[DockerManifestLayer] = []
+    config: DockerManifestV2Config
+    layers: List[DockerManifestV2Layer] = []
 
 
 class DockerConfigConfig(BaseModel):
@@ -49,7 +74,7 @@ class DockerConfigConfig(BaseModel):
     Image: Optional[str] = None
     Volumes: Optional[List[str]]
     WorkingDir: str = "/"
-    Entrypoint: Optional[str] = ["/bin/sh", "-c"]
+    Entrypoint: Optional[List[str]] = ["/bin/sh", "-c"]
     OnBuild: Optional[str] = None
     Labels: Optional[Dict[str, str]] = {"PYTHON_DOCKER": VERSION}
 
@@ -68,7 +93,7 @@ class DockerConfig(BaseModel):
     architecture: str = "amd64"
     os: str = "linux"
     config: DockerConfigConfig
-    container: str
+    container: Optional[str]
     container_config: DockerConfigConfig
     created: str = Field(default_factory=_docker_datetime_factory)
     docker_version: str = "18.09.7"

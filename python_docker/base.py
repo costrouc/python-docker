@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import hashlib
 import gzip
 import tempfile
+from typing import Callable, Union
 
 from python_docker import schema, utils, docker
 from python_docker.tar import (
@@ -22,16 +23,33 @@ class Layer:
         self,
         id,
         parent,
-        content,
+        content: Union[bytes, Callable],
         architecture: str = "x86-64",
         os: str = "linux",
         created: str = None,
         author: str = "conda-docker",
         config: dict = None,
+        checksum: str = None,
+        compressed_size: int = None,
+        compressed_checksum: str = None,
     ):
         self.id = id
         self.parent = parent
-        self._content = content
+
+        if isinstance(content, bytes):
+            self._cached_content = content
+        else:  # callable
+            self._content_callable = content
+
+        if checksum:
+            self._cached_checksum = checksum
+
+        if compressed_size:
+            self._cached_compressed_size = compressed_size
+
+        if compressed_checksum:
+            self._cached_compressed_checksum = compressed_checksum
+
         self.architecture = architecture
         self.os = os
         self.created = created or datetime.now(timezone.utc).astimezone().isoformat()
@@ -40,7 +58,10 @@ class Layer:
 
     @property
     def content(self):
-        return self._content
+        if hasattr(self, "_cached_content"):
+            return self._cached_content
+        self._cached_content = self._content_callable()
+        return self._cached_content
 
     @property
     def size(self):
@@ -48,7 +69,10 @@ class Layer:
 
     @property
     def checksum(self):
-        return hashlib.sha256(self.content).hexdigest()
+        if hasattr(self, "_cached_checksum"):
+            return self._cached_checksum
+        self._cached_checksum = hashlib.sha256(self.content).hexdigest()
+        return self._cached_checksum
 
     @property
     def compressed_content(self):
@@ -60,11 +84,19 @@ class Layer:
 
     @property
     def compressed_size(self):
-        return len(self.content)
+        if hasattr(self, "_cached_compressed_size"):
+            return self._cached_compressed_size
+        self._cached_compressed_size = len(self.compressed_content)
+        return self._cached_compressed_size
 
     @property
     def compressed_checksum(self):
-        return hashlib.sha256(self.compressed_content).hexdigest()
+        if hasattr(self, "_cached_compressed_checksum"):
+            return self._cached_compressed_checksum
+        self._cached_compressed_checksum = hashlib.sha256(
+            self.compressed_content
+        ).hexdigest()
+        return self._cached_compressed_checksum
 
     @property
     def tar(self):
@@ -131,7 +163,7 @@ class Image:
 
     @property
     def manifest_v2(self):
-        docker_manifest = schema.DockerManifest.construct()
+        docker_manifest = schema.DockerManifestV2.construct()
         docker_config = schema.DockerConfig.construct(
             config=schema.DockerConfigConfig(),
             container_config=schema.DockerConfigConfig(),
@@ -139,7 +171,7 @@ class Image:
         )
 
         for layer in self.layers:
-            docker_layer = schema.DockerManifestLayer(
+            docker_layer = schema.DockerManifestV2Layer(
                 size=layer.compressed_size, digest=f"sha256:{layer.compressed_checksum}"
             )
             docker_manifest.layers.append(docker_layer)
@@ -150,7 +182,7 @@ class Image:
         docker_config_content = utils.sorted_json_dumps(docker_config.dict())
         docker_config_hash = hashlib.sha256(docker_config_content).hexdigest()
 
-        docker_manifest.config = schema.DockerManifestConfig(
+        docker_manifest.config = schema.DockerManifestV2Config(
             size=len(docker_config_content), digest=f"sha256:{docker_config_hash}"
         )
         docker_manifest_content = utils.sorted_json_dumps(docker_manifest.dict())
@@ -169,4 +201,7 @@ class Image:
 
     def run(self, cmd=None):
         self.load()
-        return docker.run(self.name, self.tag, cmd=cmd)
+        try:
+            return docker.run(self.name, self.tag, cmd=cmd)
+        except Exception as e:
+            print(e.output)

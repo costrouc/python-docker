@@ -13,8 +13,8 @@ from python_docker.base import Image
 @pytest.mark.parametrize(
     "image_name, tag, layers",
     [
-        ("library/hello-world", "latest", 2),
-        ("library/busybox", "latest", 2),
+        ("library/hello-world", "latest", 1),
+        ("library/busybox", "latest", 1),
     ],
 )
 def test_dockerhub_pull(image_name, tag, layers):
@@ -77,7 +77,7 @@ def test_local_docker_pull():
 
     assert image.name == new_image
     assert image.tag == new_tag
-    assert len(image.layers) == 2
+    assert len(image.layers) == 1
 
 
 @pytest.mark.parametrize(

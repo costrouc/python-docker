@@ -8,6 +8,7 @@ from urllib.parse import urlparse, parse_qs
 import requests
 
 from python_docker.base import Image, Layer
+from python_docker import schema
 
 
 def ttlhash(seconds=60):
@@ -86,12 +87,33 @@ class Registry:
         response = self.request("/v2/")
         return response.status_code != 401
 
-    def get_manifest(self, image: str, tag: str):
+    def get_manifest(self, image: str, tag: str, version="v1"):
+        version_map = {
+            "v1": "application/vnd.docker.distribution.manifest.v1+json",
+            "v2": "application/vnd.docker.distribution.manifest.v2+json",
+        }
+
+        if version not in version_map:
+            raise ValueError(f"manifest version={version} not supported")
+
         response = self.request(
-            f"/v2/{image}/manifests/{tag}", image=image, action="pull"
+            f"/v2/{image}/manifests/{tag}",
+            image=image,
+            action="pull",
+            headers={"Accept": version_map[version]},
         )
+
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        if version == "v1":
+            return schema.DockerManifestV1.parse_obj(data)
+        elif version == "v2":
+            return schema.DockerManifestV2.parse_obj(data)
+
+    def get_manifest_configuration(self, image: str, tag: str):
+        manifestV2 = self.get_manifest(image, tag, version="v2")
+        config_data = json.loads(self.get_blob(image, manifestV2.config.digest))
+        return schema.DockerConfig.parse_obj(config_data)
 
     def get_manifest_digest(self, image: str, tag: str):
         response = self.request(
@@ -115,7 +137,7 @@ class Registry:
             f"/v2/{image}/blobs/{blobsum}", image=image, action="pull"
         )
         response.raise_for_status()
-        return gzip.decompress(response.content)
+        return response.content
 
     def begin_upload(self, image: str):
         response = self.request(
@@ -177,26 +199,56 @@ class Registry:
 
         return self.request(f"/v2/{image}/tags/list", params=query).json()["tags"]
 
-    def pull_image(self, image: str, tag: str = "latest"):
-        manifest = self.get_manifest(image, tag)
+    def pull_image(self, image: str, tag: str = "latest", lazy: bool = False):
+        """Pull specific image from docker registry
+
+        Crates an Image object with a list of ordered Layers
+        inside. If `lazy` is set to True the layer content is not
+        actually downloaded unless actually referenced. Useful if you
+        are making small modifications to docker images adding a few
+        layers.
+
+        """
+
+        def _get_layer_blob(image, blobsum):
+            return gzip.decompress(self.get_blob(image, blobsum))
+
+        manifest = self.get_manifest(image, tag, version="v2")
+        manifest_config = self.get_manifest_configuration(image, tag)
 
         layers = []
-        for metadata, blob in zip(manifest["history"], manifest["fsLayers"]):
-            d = json.loads(metadata["v1Compatibility"])
-            digest = self.get_blob(image, blob["blobSum"])
+        parent = None
+        # traverse in reverse order so that parent id can be correct
+        for diffid_checksum, layer in zip(
+            manifest_config.rootfs.diff_ids[::-1], manifest.layers[::-1]
+        ):
+            checksum = diffid_checksum.split(":")[1]
+            compressed_size = layer.size
+            compressed_checksum = layer.digest.split(":")[1]
 
-            layers.append(
+            if lazy:
+                digest = functools.partial(_get_layer_blob, image, layer.digest)
+            else:
+                digest = _get_layer_blob(image, layer.digest)
+
+            layers.insert(
+                0,
                 Layer(
-                    id=d["id"],
-                    parent=d.get("parent"),
-                    architecture=d.get("architecture"),
-                    os=d.get("os"),
-                    created=d.get("created"),
-                    author=d.get("author"),
-                    config=d.get("config"),
+                    id=checksum,
+                    parent=parent,
+                    architecture=manifest_config.architecture,
+                    os=manifest_config.os,
+                    created=manifest_config.created,
+                    author=None,
+                    config=manifest_config.config.dict(),
                     content=digest,
-                )
+                    checksum=checksum,
+                    compressed_size=compressed_size,
+                    compressed_checksum=compressed_checksum,
+                ),
             )
+
+            parent = checksum
         return Image(image, tag, layers)
 
     def push_image(self, image: Image):

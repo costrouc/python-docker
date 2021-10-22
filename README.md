@@ -39,6 +39,30 @@ image.write_filename('example-docker-image.tar')
 image.run(['cat /this/is/a/test1'])
 ```
 
+The above example shows how you can update a docker image after
+pulling it from a registry. Additionally there is a `lazy` option in
+the `pull_image` method. This allows you to modify docker images
+without actually having to download all the layers. This is an
+important feature when needing to add a small layer to a larger gpu
+image that is several GBs.
+
+```python
+from python_docker.base import Image
+from python_docker.registry import Registry
+
+registry = Registry()
+image = registry.pull_image('continuumio/miniconda3', 'latest', lazy=True)
+
+# do the same actions as the example above
+# difference is that the layers are lazily downloaded 
+# only when needed in the `image.write_filename`
+# and `image.run`.
+
+registry.push_image(image)
+# push_image does not require downloading the layers
+```
+
+
 # Development
 
 ## Dependencies
