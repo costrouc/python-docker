@@ -18,6 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.2.0] - 2022-08-01
+
+### Added
+
+ - tests for python 3.10
+ - tests for pushing images to dockerhub and quay.io
+ - properly implemented authentication for basic and token based authentication
+
+### Fixed
+
+ - no longer trust the docker checksum for content recompute each time
+
 ## [0.1.2] - 2021-10-21
 
 ### Added

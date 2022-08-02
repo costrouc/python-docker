@@ -8,7 +8,7 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="python-docker",
-    version="0.1.2",
+    version="0.2.0",
     description="Python Docker",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -23,6 +23,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3 :: Only",
     ],
     license_files=('LICENSE',),
