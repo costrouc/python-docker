@@ -101,6 +101,7 @@ class Registry:
             "GET": self.session.get,
             "POST": self.session.post,
             "PUT": self.session.put,
+            "PATCH": self.session.patch,
             "DELETE": self.session.delete,
         }
 
@@ -274,7 +275,7 @@ class Registry:
         return Image(image, tag, layers)
 
     def push_image(self, image: Image):
-        self.authenticate(image=image, action="push")
+        self.authenticate(image=image.name, action="push,pull")
 
         for layer in image.layers:
             # make sure to check if the layer already exists on the

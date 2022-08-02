@@ -41,15 +41,6 @@ class Layer:
         else:  # callable
             self._content_callable = content
 
-        if checksum:
-            self._cached_checksum = checksum
-
-        if compressed_size:
-            self._cached_compressed_size = compressed_size
-
-        if compressed_checksum:
-            self._cached_compressed_checksum = compressed_checksum
-
         self.architecture = architecture
         self.os = os
         self.created = created or datetime.now(timezone.utc).astimezone().isoformat()
