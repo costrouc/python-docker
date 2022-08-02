@@ -35,7 +35,7 @@ setup(
     extras_require={
         "dev": [
             "pytest",
-            "black==21.5b0",
+            "black==22.6.0",
             "flake8",
         ],
     },

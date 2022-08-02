@@ -1,6 +1,5 @@
 import json
 import gzip
-import time
 import functools
 import base64
 import re
@@ -15,9 +14,9 @@ from python_docker import schema
 class Registry:
     def __init__(
         self,
-        hostname: str="https://registry-1.docker.io",
-        username: str=None,
-        password: str=None,
+        hostname: str = "https://registry-1.docker.io",
+        username: str = None,
+        password: str = None,
     ):
         self.hostname = hostname
         self.username = username
@@ -27,17 +26,22 @@ class Registry:
 
     def detect_authentication(self):
         response = requests.get(f"{self.hostname}/v2/")
-        if 'www-authenticate' in response.headers:
-            auth_scheme, parameters = response.headers['www-authenticate'].split(' ', 1)
+        if "www-authenticate" in response.headers:
+            auth_scheme, parameters = response.headers["www-authenticate"].split(" ", 1)
             self.authentication_type = auth_scheme
-            self.authentication_parameters = {key: value for key, value in re.findall('([^,=]*)="([^"]*)"', parameters)}
-            if auth_scheme == 'Basic':
+            self.authentication_parameters = {
+                key: value
+                for key, value in re.findall('([^,=]*)="([^"]*)"', parameters)
+            }
+            if auth_scheme == "Basic":
                 if self.username is None or self.password is None:
-                    raise ValueError('registry requires basic authentication and username and or password not specified when initializing client')
-            elif auth_scheme == 'Bearer':
+                    raise ValueError(
+                        "registry requires basic authentication and username and or password not specified when initializing client"
+                    )
+            elif auth_scheme == "Bearer":
                 pass
             else:
-                raise ValueError(f'authentication type {auth_scheme} not supported')
+                raise ValueError(f"authentication type {auth_scheme} not supported")
         else:
             self.authentication_type = None
 
@@ -45,39 +49,45 @@ class Registry:
         credentials = base64.b64encode(
             f"{self.username}:{self.password}".encode("utf-8")
         ).decode("utf-8")
-        self.session.headers.update({
-            'Authorization': f'Basic {credentials}'
-        })
+        self.session.headers.update({"Authorization": f"Basic {credentials}"})
 
     def token_authenticate(self, image: str = None, action: str = None):
         query = {
-            "service": self.authentication_parameters['service'],
+            "service": self.authentication_parameters["service"],
         }
+        headers = {}
 
         if image is not None and action is not None:
             query["scope"] = f"repository:{image}:{action}"
 
-        base_url = self.authentication_parameters['realm']
+        if self.username is not None:
+            query["account"] = self.username
+
+        if self.username is not None and self.password is not None:
+            credentials = base64.b64encode(
+                f"{self.username}:{self.password}".encode("utf-8")
+            ).decode("utf-8")
+            headers["Authorization"] = f"Basic {credentials}"
+
+        base_url = self.authentication_parameters["realm"]
         if query:
             base_url += "?" + "&".join(f"{key}={value}" for key, value in query.items())
 
-        response = requests.get(base_url)
+        response = requests.get(base_url, headers=headers)
         if response.status_code != 200:
-            raise ValueError(f'token authentication failed for {base_url}')
+            raise ValueError(f"token authentication failed for {base_url}")
 
         token = response.json()["token"]
-        self.session.headers.update({
-            'Authorization': f'Bearer {token}'
-        })
+        self.session.headers.update({"Authorization": f"Bearer {token}"})
 
     def authenticate(self, image: str = None, action: str = None):
-        if self.authentication_type == 'Basic':
+        if self.authentication_type == "Basic":
             self.basic_authenticate(image, action)
-        elif self.authentication_type == 'Bearer':
+        elif self.authentication_type == "Bearer":
             self.token_authenticate(image, action)
 
         if not self.authenticated():
-            raise ValueError('failed to authenticate')
+            raise ValueError("failed to authenticate")
 
     def authenticated(self):
         response = self.session.get(f"{self.hostname}/v2/")
@@ -220,7 +230,7 @@ class Registry:
         layers.
 
         """
-        self.authenticate(image=image, action='pull')
+        self.authenticate(image=image, action="pull")
 
         def _get_layer_blob(image, blobsum):
             return gzip.decompress(self.get_blob(image, blobsum))
@@ -264,7 +274,7 @@ class Registry:
         return Image(image, tag, layers)
 
     def push_image(self, image: Image):
-        self.authenticate(image=image, action='push')
+        self.authenticate(image=image, action="push")
 
         for layer in image.layers:
             # make sure to check if the layer already exists on the

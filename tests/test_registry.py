@@ -1,5 +1,4 @@
 import pytest
-import functools
 
 from python_docker import docker
 from python_docker.registry import Registry
@@ -29,13 +28,17 @@ def test_dockerhub_pull(hostname, image_name, tag, layers):
     "config, image, action",
     [
         (dict(hostname="http://localhost:5000"), None, None),
-        (dict(
-            hostname="http://localhost:6000",
-            username="admin",
-            password="password",
-        ), None, None),
-        (dict(hostname="https://registry-1.docker.io"), 'library/alpine', 'pull'),
-        (dict(hostname="https://quay.io"), 'libpod/alpine', 'pull'),
+        (
+            dict(
+                hostname="http://localhost:6000",
+                username="admin",
+                password="password",
+            ),
+            None,
+            None,
+        ),
+        (dict(hostname="https://registry-1.docker.io"), "library/alpine", "pull"),
+        (dict(hostname="https://quay.io"), "libpod/alpine", "pull"),
     ],
 )
 def test_registry_authenticated(config, image, action):
