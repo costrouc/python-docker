@@ -30,7 +30,7 @@ def test_local_docker_push_pull_lazy():
     docker.tag(image, tag, new_image_full, new_tag)
     docker.push(new_image_full, new_tag)
 
-    registry = Registry(hostname="http://localhost:5000", authentication=None)
+    registry = Registry(hostname="http://localhost:5000")
 
     assert new_image in registry.list_images()
     assert new_tag in registry.list_image_tags("library/mybusybox")

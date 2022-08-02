@@ -14,6 +14,15 @@
       in pkgs.mkShell {
         buildInputs = [
           pythonPackages.requests
+          pythonPackages.pydantic
+
+          # dev dependencies
+          pythonPackages.black
+          pythonPackages.flake8
+          pythonPackages.pytest
+
+          pkgs.mitmproxy
+          pkgs.docker-compose
         ];
       };
   };

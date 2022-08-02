@@ -2,25 +2,22 @@ import pytest
 import functools
 
 from python_docker import docker
-from python_docker.registry import (
-    Registry,
-    basic_authentication,
-    dockerhub_authentication,
-)
+from python_docker.registry import Registry
 from python_docker.base import Image
 
 
 @pytest.mark.parametrize(
-    "image_name, tag, layers",
+    "hostname, image_name, tag, layers",
     [
-        ("library/hello-world", "latest", 1),
-        ("library/busybox", "1.34.0", 1),
-        ("condaforge/miniforge3", "4.10.3-7", 2),
-        ("library/ubuntu", "xenial", 4),
+        ("https://registry-1.docker.io", "library/hello-world", "latest", 1),
+        ("https://registry-1.docker.io", "library/busybox", "1.34.0", 1),
+        ("https://registry-1.docker.io", "condaforge/miniforge3", "4.10.3-7", 2),
+        ("https://registry-1.docker.io", "library/ubuntu", "xenial", 4),
+        ("https://quay.io", "libpod/alpine", "latest", 1),
     ],
 )
-def test_dockerhub_pull(image_name, tag, layers):
-    registry = Registry()
+def test_dockerhub_pull(hostname, image_name, tag, layers):
+    registry = Registry(hostname)
     # use lazy to avoid actual downloads of layers for this test
     image = registry.pull_image(image_name, tag, lazy=True)
     assert image.name == image_name
@@ -29,33 +26,37 @@ def test_dockerhub_pull(image_name, tag, layers):
 
 
 @pytest.mark.parametrize(
-    "hostname, authentication",
+    "config, image, action",
     [
-        ("http://localhost:5000", None),
-        (
-            "http://localhost:6000",
-            functools.partial(basic_authentication, "admin", "password"),
-        ),
-        ("https://registry-1.docker.io", dockerhub_authentication),
+        (dict(hostname="http://localhost:5000"), None, None),
+        (dict(
+            hostname="http://localhost:6000",
+            username="admin",
+            password="password",
+        ), None, None),
+        (dict(hostname="https://registry-1.docker.io"), 'library/alpine', 'pull'),
+        (dict(hostname="https://quay.io"), 'libpod/alpine', 'pull'),
     ],
 )
-def test_registry_authenticated(hostname, authentication):
-    r = Registry(hostname, authentication)
-    assert r.authenticated()
+def test_registry_authenticated(config, image, action):
+    r = Registry(**config)
+    r.authenticate(image, action)
 
 
 @pytest.mark.parametrize(
-    "hostname, authentication",
+    "config",
     [
-        (
-            "http://localhost:6000",
-            functools.partial(basic_authentication, "admin", "wrongpassword"),
+        dict(
+            hostname="http://localhost:6000",
+            username="admin",
+            password="passwordwrong",
         ),
     ],
 )
-def test_registry_not_authenticated(hostname, authentication):
-    r = Registry(hostname, authentication)
-    assert not r.authenticated()
+def test_registry_not_authenticated(config):
+    with pytest.raises(ValueError):
+        r = Registry(**config)
+        r.authenticate()
 
 
 def test_local_docker_pull():
@@ -71,7 +72,7 @@ def test_local_docker_pull():
     docker.tag(image, tag, new_image_full, new_tag)
     docker.push(new_image_full, new_tag)
 
-    registry = Registry(hostname="http://localhost:5000", authentication=None)
+    registry = Registry(hostname="http://localhost:5000")
 
     assert new_image in registry.list_images()
     assert new_tag in registry.list_image_tags("library/mybusybox")
@@ -84,20 +85,21 @@ def test_local_docker_pull():
 
 
 @pytest.mark.parametrize(
-    "hostname, authentication",
+    "config",
     [
-        ("http://localhost:5000", None),
-        (
-            "http://localhost:6000",
-            functools.partial(basic_authentication, "admin", "password"),
+        dict(hostname="http://localhost:5000"),
+        dict(
+            hostname="http://localhost:6000",
+            username="admin",
+            password="password",
         ),
     ],
 )
-def test_local_docker_push(hostname, authentication):
+def test_local_docker_push(config):
     filename = "tests/assets/hello-world.tar"
     image = Image.from_filename(filename)[0]
 
-    registry = Registry(hostname=hostname, authentication=authentication)
+    registry = Registry(**config)
     registry.push_image(image)
 
     assert image.name in registry.list_images()
@@ -117,7 +119,7 @@ def test_local_docker_delete():
     docker.tag(image, tag, new_image_full, new_tag)
     docker.push(new_image_full, new_tag)
 
-    registry = Registry(hostname="http://localhost:5000", authentication=None)
+    registry = Registry(hostname="http://localhost:5000")
 
     assert new_image in registry.list_images()
     assert new_tag in registry.list_image_tags(new_image)
