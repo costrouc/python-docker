@@ -24,6 +24,13 @@
           pkgs.mitmproxy
           pkgs.docker-compose
         ];
+
+        shellHook = ''
+          export DOCKER_USERNAME="$(gopass www/docker.com/costrouc username)"
+          export DOCKER_PASSWORD="$(gopass --password www/docker.com/costrouc)"
+          export QUAY_USERNAME="$(gopass www/quay.io/costrouc username)"
+          export QUAY_PASSWORD="$(gopass --password www/quay.io/costrouc)"
+        '';
       };
   };
 }

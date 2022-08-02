@@ -1,4 +1,8 @@
+import datetime
+import os
+
 from python_docker import docker
+from python_docker.base import Image
 from python_docker.registry import Registry
 
 
@@ -51,25 +55,44 @@ def test_local_docker_push_pull_lazy():
     for layer in image.layers[1:]:
         assert not hasattr(layer, "_cached_content")
 
-    # check that the act of uploading the image
-    # does not cuase the content to be realized
     image.tag = "anothertagname"
     registry.push_image(image)
 
-    # check that all but first layer are not fetched
-    # since they still lazily exist at registry
-    assert hasattr(image.layers[0], "_cached_content")
-    for layer in image.layers[1:]:
-        assert not hasattr(layer, "_cached_content")
-
     assert image.run([f"cat {content_path}"]) == content_message
-
-    # check that all layers have now been fetched since the image was
-    # run and layer contents were needed
-    for layer in image.layers:
-        assert hasattr(layer, "_cached_content")
 
     new_image = registry.pull_image(image.name, image.tag)
     assert len(new_image.layers) == 2
     new_image.write_filename("example.tar")
     assert new_image.run([f"cat {content_path}"]) == content_message
+
+
+def test_dockerhub_push():
+    registry = Registry(
+        hostname="https://registry-1.docker.io",
+        username=os.environ["DOCKER_USERNAME"],
+        password=os.environ["DOCKER_PASSWORD"],
+    )
+
+    utcnow_str = datetime.datetime.utcnow().strftime("%m-%d-%Y-%H-%M-%S")
+    image = Image("costrouc/pytest-python-docker", utcnow_str)
+    image.add_layer_contents(
+        {"/a/b/c.txt": "some content {utcnow_str}".encode("utf-8")}
+    )
+
+    registry.push_image(image)
+
+
+def test_quayio_push():
+    registry = Registry(
+        hostname="https://quay.io",
+        username=os.environ["QUAY_USERNAME"],
+        password=os.environ["QUAY_PASSWORD"],
+    )
+
+    utcnow_str = datetime.datetime.utcnow().strftime("%m-%d-%Y-%H-%M-%S")
+    image = Image("costrouc/pytest-python-docker", utcnow_str)
+    image.add_layer_contents(
+        {"/a/b/c.txt": "some content {utcnow_str}".encode("utf-8")}
+    )
+
+    registry.push_image(image)
