@@ -69,7 +69,7 @@ class DockerConfigConfig(BaseModel):
     Env: List[str] = [
         "PATH=/opt/conda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     ]
-    Cmd: List[str] = ["/bin/sh"]
+    Cmd: Optional[List[str]] = ["/bin/sh"]
     ArgsEscaped: bool = True
     Image: Optional[str] = None
     Volumes: Optional[List[str]]
