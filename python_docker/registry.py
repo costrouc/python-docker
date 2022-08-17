@@ -231,6 +231,10 @@ class Registry:
         layers.
 
         """
+        # detect official docker images
+        if "/" not in image:
+            image = "library/" + image
+
         self.authenticate(image=image, action="pull")
 
         def _get_layer_blob(image, blobsum):
