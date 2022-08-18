@@ -231,6 +231,7 @@ class Registry:
         layers.
 
         """
+
         self.authenticate(image=image, action="pull")
 
         def _get_layer_blob(image, blobsum):
