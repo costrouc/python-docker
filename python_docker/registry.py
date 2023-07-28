@@ -128,14 +128,14 @@ class Registry:
         response.raise_for_status()
         data = response.json()
         if version == "v1":
-            return schema.DockerManifestV1.parse_obj(data)
+            return schema.DockerManifestV1.model_validate(data)
         elif version == "v2":
-            return schema.DockerManifestV2.parse_obj(data)
+            return schema.DockerManifestV2.model_validate(data)
 
     def get_manifest_configuration(self, image: str, tag: str):
         manifestV2 = self.get_manifest(image, tag, version="v2")
         config_data = json.loads(self.get_blob(image, manifestV2.config.digest))
-        return schema.DockerConfig.parse_obj(config_data)
+        return schema.DockerConfig.model_validate(config_data)
 
     def get_manifest_digest(self, image: str, tag: str):
         response = self.request(
@@ -263,7 +263,7 @@ class Registry:
                     os=manifest_config.os,
                     created=manifest_config.created,
                     author=None,
-                    config=manifest_config.config.dict(),
+                    config=manifest_config.config.model_dump(),
                     content=digest,
                     checksum=checksum,
                     compressed_size=compressed_size,
