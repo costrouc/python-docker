@@ -30,7 +30,7 @@ setup(
     keywords="conda, docker",
     packages=find_packages(where="."),
     install_requires=[
-        "pydantic",
+        "pydantic>=2.0",
         "requests",
     ],
     extras_require={
