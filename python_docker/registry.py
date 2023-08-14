@@ -140,7 +140,12 @@ class Registry:
     def get_manifest_configuration(self, image: str, tag: str):
         manifestV2 = self.get_manifest(image, tag, version="v2")
         config_data = json.loads(self.get_blob(image, manifestV2.config.digest))
-        return schema.DockerConfig.model_validate(config_data)
+
+        # for pydantic 2 compatibility
+        if hasattr(schema.DockerConfig, "model_validate"):
+            return schema.DockerConfig.model_validate(config_data)
+        else:
+            return schema.DockerConfig.parse_obj(config_data)
 
     def get_manifest_digest(self, image: str, tag: str):
         response = self.request(
