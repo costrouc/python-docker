@@ -132,7 +132,7 @@ class Registry:
         )
 
         # for pydantic 2 compatibility
-        if hasattr(manifest, "model_validate") and callable(manifest.model_validate):
+        if hasattr(manifest, "model_validate"):
             return manifest.model_validate(data)
         else:
             return manifest.parse_obj(data)
