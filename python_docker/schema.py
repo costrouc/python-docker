@@ -72,7 +72,7 @@ class DockerConfigConfig(BaseModel):
     Cmd: List[str] = ["/bin/sh"]
     ArgsEscaped: bool = True
     Image: Optional[str] = None
-    Volumes: Optional[List[str]]
+    Volumes: Optional[List[str]] = None
     WorkingDir: str = "/"
     Entrypoint: Optional[List[str]] = ["/bin/sh", "-c"]
     OnBuild: Optional[str] = None
@@ -93,7 +93,7 @@ class DockerConfig(BaseModel):
     architecture: str = "amd64"
     os: str = "linux"
     config: DockerConfigConfig
-    container: Optional[str]
+    container: Optional[str] = None
     container_config: Optional[DockerConfigConfig]
     created: str = Field(default_factory=_docker_datetime_factory)
     docker_version: str = "18.09.7"

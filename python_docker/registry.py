@@ -127,15 +127,25 @@ class Registry:
 
         response.raise_for_status()
         data = response.json()
-        if version == "v1":
-            return schema.DockerManifestV1.parse_obj(data)
-        elif version == "v2":
-            return schema.DockerManifestV2.parse_obj(data)
+        manifest = (
+            schema.DockerManifestV1 if version == "v1" else schema.DockerManifestV2
+        )
+
+        # for pydantic 2 compatibility
+        if hasattr(manifest, "model_validate"):
+            return manifest.model_validate(data)
+        else:
+            return manifest.parse_obj(data)
 
     def get_manifest_configuration(self, image: str, tag: str):
         manifestV2 = self.get_manifest(image, tag, version="v2")
         config_data = json.loads(self.get_blob(image, manifestV2.config.digest))
-        return schema.DockerConfig.parse_obj(config_data)
+
+        # for pydantic 2 compatibility
+        if hasattr(schema.DockerConfig, "model_validate"):
+            return schema.DockerConfig.model_validate(config_data)
+        else:
+            return schema.DockerConfig.parse_obj(config_data)
 
     def get_manifest_digest(self, image: str, tag: str):
         response = self.request(
@@ -254,6 +264,12 @@ class Registry:
             else:
                 digest = _get_layer_blob(image, layer.digest)
 
+            # for pydantic 2 compatibility
+            if hasattr(manifest_config.config, "model_dump"):
+                config = manifest_config.config.model_dump()
+            else:
+                config = manifest_config.config.dict()
+
             layers.insert(
                 0,
                 Layer(
@@ -263,7 +279,7 @@ class Registry:
                     os=manifest_config.os,
                     created=manifest_config.created,
                     author=None,
-                    config=manifest_config.config.dict(),
+                    config=config,
                     content=digest,
                     checksum=checksum,
                     compressed_size=compressed_size,

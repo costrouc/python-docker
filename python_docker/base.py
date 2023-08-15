@@ -45,7 +45,14 @@ class Layer:
         self.os = os
         self.created = created or datetime.now(timezone.utc).astimezone().isoformat()
         self.author = author
-        self.config = config or schema.DockerConfigConfig().dict()
+
+        # for pydantic 2 compatibility
+        docker_config = (
+            schema.DockerConfigConfig().model_dump()
+            if hasattr(schema.DockerConfigConfig, "model_dump")
+            else schema.DockerConfigConfig().dict()
+        )
+        self.config = config or docker_config
 
     @property
     def content(self):
@@ -154,12 +161,25 @@ class Image:
 
     @property
     def manifest_v2(self):
-        docker_manifest = schema.DockerManifestV2.construct()
-        docker_config = schema.DockerConfig.construct(
-            config=schema.DockerConfigConfig(),
-            container_config=schema.DockerConfigConfig(),
-            rootfs=schema.DockerConfigRootFS(),
-        )
+        config = schema.DockerConfig()
+        container_config = schema.DockerConfigConfig()
+        rootfs = schema.DockerConfigRootFS()
+
+        # for pydantic 2 compatibility
+        if hasattr(schema.DockerManifestV2, "model_construct"):
+            docker_manifest = schema.DockerManifestV2.model_construct()
+            docker_config = schema.DockerConfig.model_construct(
+                config=config,
+                container_config=container_config,
+                rootfs=rootfs,
+            )
+        else:
+            docker_manifest = schema.DockerManifestV2.construct()
+            docker_config = schema.DockerConfig.construct(
+                config=config,
+                container_config=container_config,
+                rootfs=rootfs,
+            )
 
         for layer in self.layers:
             docker_layer = schema.DockerManifestV2Layer(
